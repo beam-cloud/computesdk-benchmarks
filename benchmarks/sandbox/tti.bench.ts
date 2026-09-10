@@ -42,9 +42,6 @@ export const config = defineBenchmarkConfig({
   concurrency: 1,
   participants: providers,
   display: {
-    metrics: [
-      { key: 'ttiMs', label: 'Time to interactive', unit: 'ms', direction: 'lower-better', decimals: 0 },
-    ],
     steps: [
       { key: 'create', label: 'Create sandbox' },
       { key: 'exec.task', label: 'Run first command' },
@@ -54,7 +51,7 @@ export const config = defineBenchmarkConfig({
   },
   scoring: {
     metrics: [
-      { key: 'ttiMs', ceiling: 10000, weights: { median: 0.60, p95: 0.25, p99: 0.15 } },
+      { key: 'ttiMs', unit: 'ms', ceiling: 10000, weights: { median: 0.60, p95: 0.25, p99: 0.15 } },
     ],
   },
   // Legacy JSON labels a burst run 'concurrent' (see merge-results /
@@ -113,9 +110,12 @@ export const task = defineTask<ProviderConfig>(async (ctx) => {
         throw new Error('create step did not produce a createMs measurement');
       }
       ttiMs = createMs + (performance.now() - commandStart);
-      measure({ ttiMs });
       return r;
     });
+    if (ttiMs === undefined) {
+      throw new Error('exec.task did not produce a ttiMs measurement');
+    }
+    measure({ ttiMs });
     log('node -v succeeded', { level: 'info', meta: { version: result.stdout?.trim() ?? null, exitCode: result.exitCode } });
   } finally {
     if (sandbox) {
